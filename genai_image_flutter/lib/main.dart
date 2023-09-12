@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:genai_image_flutter/image_picker_web_example/photo_history/photo_history_add_view.dart';
 import 'package:genai_image_flutter/image_picker_web_example/sample/sample_page.dart';
+import 'package:genai_image_flutter/image_picker_web_example/sample/advanced_sample_page.dart';
 
 void main() => runApp(MaterialApp(home: HomePage()));
 
@@ -8,19 +8,19 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Home')),
+      appBar: AppBar(title: Text('Item description maker')),
       body: Center(
         child: SeparatedColumn(
           mainAxisAlignment: MainAxisAlignment.center,
           separator: SizedBox(height: 8),
           children: [
             _Button(
-              label: 'Sample 1',
+              label: 'Basic Sample',
               page: SamplePage(),
             ),
             _Button(
-              label: 'Photo History',
-              page: PhotosHistoryAddPage(),
+              label: 'Advanced Sample',
+              page: AdvancedSamplePage(),
             ),
           ],
         ),

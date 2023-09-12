@@ -3,75 +3,72 @@ import 'package:image_picker_web/image_picker_web.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-
 class SamplePage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() => _SamplePageState();
 }
 
 class _SamplePageState extends State<SamplePage> {
+  String BackendURL = "https://backend-image-67idgn363a-an.a.run.app";
+  // String BackendURL = "http://localhost:8080";
   final _pickedImages = <Image>[];
+  var _imageCaption;
   var uint8list;
-  String _imageInfo = '';
-
-  Future<void> _pickImage() async {
-    final fromPicker = await ImagePickerWeb.getImageAsWidget();
-    if (fromPicker != null) {
-      setState(() {
-        _pickedImages.clear();
-        _pickedImages.add(fromPicker);
-      });
-    }
-  }
+  bool _isEnabledGetDescription = false;
+  bool _isEnabledSelectImage = true;
+  String _SelectImageButtonTitle = "Select item image";
+  String _itemDescription = 'The description will be displayed here.';
+  String _DescriptionButtonTitle = 'Get item description';
+  var selectedLangValue = "English";
+  final langLists = <String>["English", "Japanese", "Indonesian"];
 
 //  バイトで画像を選択
   Future<void> _selectImage() async {
     uint8list = await ImagePickerWeb.getImageAsBytes();
     if (uint8list != null) {
+
       setState(() {
         //アップロードと画像表示
+        _isEnabledGetDescription = false;
+        _isEnabledSelectImage = false;
         _pickedImages.clear();
         _pickedImages.add(Image.memory(uint8list));
+        _itemDescription = 'The description will be displayed here.';
+        _SelectImageButtonTitle = "loading...";
+
       });
+      _uploadImage();
+
     }
   }
 
-  
 // バイトをアップロード
   Future<void> _uploadImage() async {
-    print("start");
+    if (uint8list == null) {
+      print("no image data");
+    }
     final response = await multipart(
       method: 'POST',
-      url: Uri.http('127.0.0.1:5000', '/upload'),
-      // url: Uri.http('127.0.0.1:5000', '/test'),
+       url: Uri.parse("$BackendURL/upload"),
 
       files: [
         http.MultipartFile.fromBytes(
           'upfile',
-          uint8list ,
+          uint8list,
           filename: "media1",
         ),
       ],
     );
 
-    print(response.statusCode);
-    print(response.body);
+    setState(() {
+      _isEnabledGetDescription = true;
+      _isEnabledSelectImage = true;
+      _DescriptionButtonTitle = "Get item description";
+      _SelectImageButtonTitle = "Select item image";
 
-    // Uri url = Uri.parse("http://127.0.0.1:5000/test");
-    // Map<String, String> headers = {'content-type': 'application/json'};
-    // String body = json.encode({'name': 'moke'});
-    //
-    // http.Response resp = await http.post(url, headers: headers, body: body);
-    // if (resp.statusCode != 200) {
-    //   setState(() {
-    //     int statusCode = resp.statusCode;
-    //     print("Failed to post $statusCode");
-    //   });
-    //   return;
-    // }
-    // setState(() {
-    //   print(resp.body);
-    // });
+    });
+
+    _imageCaption = response.body;
 
   }
 
@@ -83,7 +80,6 @@ class _SamplePageState extends State<SamplePage> {
     final request = http.MultipartRequest(method, url);
 
     request.files.addAll(files); // 送信するファイルのバイナリデータを追加
-    // request.headers.addAll({'Authorization': 'Bearer xxxxxx'}); // 認証情報などを追加
 
     final stream = await request.send();
 
@@ -100,52 +96,109 @@ class _SamplePageState extends State<SamplePage> {
     });
   }
 
+  // イメージキャプションから説明文を作成
+  Future<void> _getDescriptionWithImageCaption() async {
+
+    Uri url = Uri.parse("$BackendURL/description");
+    Map<String, String> headers = {'content-type': 'application/json'};
+    // パワメーターをあとで追加
+    String body = json.encode({'imageCaption': _imageCaption,'lang': selectedLangValue});
+
+    http.Response resp = await http.post(url, headers: headers, body: body);
+    if (resp.statusCode != 200) {
+      setState(() {
+        int statusCode = resp.statusCode;
+        print("Failed to post $statusCode");
+      });
+      return;
+    }
+    setState(() {
+      // 完成品を表示
+      _itemDescription = resp.body;
+      _isEnabledGetDescription = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sample 1'),
+        title: const Text('Basic Sample'),
       ),
       body: Center(
         child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Wrap(
-                // spacing: 15.0,
-                children: <Widget>[
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeIn,
-                    child: SizedBox(
-                      width: 500,
-                      height: 200,
-                      child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _pickedImages.length,
-                          itemBuilder: (_, index) => _pickedImages[index]),
+            children: [
+              Container(
+                height: 250,
+                width: 500,
+                color: Colors.white,
+                alignment: Alignment.center,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeIn,
+                  child: SizedBox(
+                    height: 250,
+                    width: 250,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _pickedImages.length,
+                      itemBuilder: (_, index) {
+                        return Align(
+                          alignment: Alignment.center,
+                          child: _pickedImages[index],
+                        );
+                      },
                     ),
                   ),
-                  Container(
-                    height: 200,
-                    width: 200,
-                    child: Text(_imageInfo, overflow: TextOverflow.ellipsis),
-                  ),
-                ],
+                ),
+              ),
+              Container(
+                height: 10,
+                width: 500,
+                alignment: Alignment.center,
+              ),
+              Container(
+                height: 100,
+                width: 500,
+                color: Colors.white,
+                alignment: Alignment.center,
+                child: SingleChildScrollView(
+                  child: SelectableText(_itemDescription),
+                ),
               ),
               ButtonBar(alignment: MainAxisAlignment.center, children: <Widget>[
+                DropdownButton<String>(
+                  value: selectedLangValue,
+                  items: langLists
+                      .map((String list) =>
+                      DropdownMenuItem(value: list, child: Text(list)))
+                      .toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      selectedLangValue = value!;
+                    });
+                  },
+                ),
+              ]),
+              ButtonBar(alignment: MainAxisAlignment.center, children: <Widget>[
                 ElevatedButton(
-                  onPressed: _pickImage,
-                  child: const Text('Select Image'),
+                  onPressed: !_isEnabledSelectImage
+                      ? null
+                      : () {
+                    _selectImage();
+                  },
+                  child:  Text(_SelectImageButtonTitle),
                 ),
                 ElevatedButton(
-                  onPressed: _selectImage,
-                  child: const Text('select byte Image'),
-                ),
-                ElevatedButton(
-                  onPressed: _uploadImage,
-                  child: const Text('upload byte Image'),
+                  onPressed: !_isEnabledGetDescription
+                      ? null
+                      : () {
+                          _getDescriptionWithImageCaption();
+                        },
+                  child: Text(_DescriptionButtonTitle),
                 ),
               ]),
             ]),
